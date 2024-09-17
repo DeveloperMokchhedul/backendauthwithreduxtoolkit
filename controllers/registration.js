@@ -1,26 +1,46 @@
 const User = require("../models/registration"); // Correct import name to `User`
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const cloudinary = require("cloudinary")
 
 const registration = async (req, res) => {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password) {
-        return res.status(400).json({ message: "All fields are required" });
+    try {
+        const { name, email, password } = req.body;
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: "User already exists, use a different email" });
+        }
+        const hashPassword = await bcrypt.hash(password, 10);
+
+
+
+        const { pic } = await req.file.path
+        const addData = await cloudinary.uploader.upload(req.file.path)
+
+
+        const newUser = {
+            name,
+            email,
+            password: hashPassword
+        }
+
+         newUser.pic = {
+            public_id: addData.public_id,
+            url: addData.secure_url
+        }
+
+
+        const createdUser = await User.create(newUser);
+        return res.status(201).json({
+            message: "User created successfully",
+            createdUser
+        });
+    } catch (error) {
+        console.log(error);
     }
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-        return res.status(400).json({ message: "User already exists, use a different email" });
-    }
-    const hashPassword = await bcrypt.hash(password, 10);
-    const newUser = await User.create({
-        name,
-        email,
-        password: hashPassword
-    });
-    return res.status(201).json({
-        message: "User created successfully",
-        newUser
-    });
 };
 
 
@@ -51,19 +71,20 @@ const userLogin = async (req, res) => {
     return res.status(200).json({
         message: "User logged in successfully",
         status: true,
-        user: { name: existingUser.name, email: existingUser.email, role: existingUser.role } // Return non-sensitive user data
+        user: { name: existingUser.name, email: existingUser.email, role: existingUser.role, image:existingUser.pic.url } // Return non-sensitive user data
     });
+    
 };
 
 
-const userLogout = async(req, res)=>{
+const userLogout = async (req, res) => {
     res.clearCookie("token")
     return res.status(200).json({
-        message:"Logout succesfully"
+        message: "Logout succesfully"
     })
 }
 
 
 
 
-module.exports = { registration, userLogin,userLogout };
+module.exports = { registration, userLogin, userLogout };

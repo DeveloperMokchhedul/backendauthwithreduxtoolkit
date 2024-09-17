@@ -7,7 +7,7 @@ const userSchema = mongoose.Schema({
     },
     email:{
         type:String,
-        required:true
+        
     },
     role:{
         type:String,
@@ -15,7 +15,11 @@ const userSchema = mongoose.Schema({
     },
     password:{
         type:String,
-        required:true
+      
+    },
+    pic:{
+        public_id:String,
+        url:String
     }
 })
 
